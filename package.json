@@ -1,0 +1,27 @@
+{
+  "name": "blogroll",
+  "version": "1.0.0",
+  "description": "CC的部落格 友链朋友圈",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "dependencies": {
+    "axios": "0.21.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ccknbc-actions/blogroll.git"
+  },
+  "keywords": [
+    "CC的部落格",
+    "CC康纳百川",
+    "友链朋友圈",
+    "HEXO"
+  ],
+  "author": "CCKNBC",
+  "bugs": {
+    "url": "https://github.com/ccknbc-actions/blogroll/issues"
+  },
+  "homepage": "https://github.com/ccknbc-actions/blogroll#readme"
+}

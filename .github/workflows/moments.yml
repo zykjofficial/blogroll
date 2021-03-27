@@ -1,0 +1,44 @@
+# 文章更新
+name: moments
+
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: "0 16 * * *"    
+  # push:
+  #   branches: main
+   
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+      APP_ID: ${{ secrets.APPID }} 
+      APP_KEY: ${{ secrets.APPKEY }}
+      LINK: ${{ secrets.LINK }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+    - name: Set up Python #安装python
+      uses: actions/setup-python@main
+      with:
+        python-version: 3.8
+    - name: Install requirements #安装requests
+      run: |
+        pip install -r requirements.txt
+    - name: Update Moments #更新
+      run: | 
+        python runOld.py ${{ secrets.APPID }} ${{ secrets.APPKEY }}  ${{ secrets.LINK }}
+    - name: Delete Workflow Runs
+      uses: Mattraks/delete-workflow-runs@main
+      with:
+        retain_days: 1
+        keep_minimum_runs: 1
+    # - name: Telegram Notification
+    #   if: cancelled() == false
+    #   uses: xinthink/action-telegram@v1.1
+    #   with:
+    #     botToken: ${{ secrets.TG_BOT_TOKEN }}
+    #     chatId: ${{ secrets.TG_CHAT_ID }}
+    #     jobStatus: ${{ job.status }}
+    #     skipSuccess: false
