@@ -5,7 +5,7 @@ on:
   repository_dispatch:
   workflow_dispatch:
   issues: 
-    types: [labeled, unlabeled, edited, closed, reopened, deleted]
+    types: [opened,labeled, unlabeled, edited, closed, reopened, deleted]
   # push:
   #   branches: main
 
