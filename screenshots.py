@@ -64,7 +64,7 @@ def downloadFriends(url_prefix="https://image.thum.io/get/width/1024/crop/768/wa
 
 
 if __name__ == '__main__':
-    # getLinkFriends("https://ccknbc.now.sh/blogroll/")
+    # getLinkFriends("https://ccknbc.vercel.app/blogroll/")
     getGiteeFriends("ccknbc", "blogroll")
     getGitHubFriends("ccknbc-actions", "blogroll")
     downloadFriends()
