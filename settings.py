@@ -24,7 +24,7 @@ import os
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
 # debug模式
-DEBUG = False
+DEBUG = True
 
 # debug leancloud验证
 LC_APPID = "nSyYINNelN3OJdAbblDVNWM1-MdYXbMMI"

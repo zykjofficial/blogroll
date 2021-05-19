@@ -28,7 +28,7 @@ jobs:
         pip install -r requirements.txt
     - name: Update Moments #更新
       run: | 
-        python runOld.py ${{ secrets.APPID }} ${{ secrets.APPKEY }}  ${{ secrets.LINK }}
+        python run.py ${{ secrets.APPID }} ${{ secrets.APPKEY }}  ${{ secrets.LINK }}
     - name: Delete Workflow Runs
       uses: Mattraks/delete-workflow-runs@main
       with:
