@@ -56,7 +56,7 @@ card_style: item
 # 自定义网站截图，当样式为 card 时可以自定义网站截图
 # 如果您的站点不常更新，可留空，会使用默认接口 https://image.thum.io/get/width/1024/crop/768/allowJPG/wait/20/noanimate/https://blog.ccknbc.cc
 # 但我建议您可替换 示例中 我的域名部分 为 您的域名，以提高访问速度，每天会定时截图，您的新建 Issue 动作也会触发截图一次
-# 例如 screenshot: https://cdn.jsdelivr.net/gh/ccknbc-actions/blogroll@webp/xxx.webp
+# 例如 https://cdn.jsdelivr.net/gh/ccknbc-actions/blogroll@webp/xxx.webp
 # 如果您的站点加载完毕耗时较长，请自行替换为此接口中网址部分填入 https://s0.wordpress.com/mshots/v1/https://blog.ccknbc.cc?w=1280&h=960 
 # 如果您知道其他好用的接口，欢迎给我留言，谢谢
 screenshot: https://cdn.jsdelivr.net/gh/ccknbc-actions/blogroll@webp/www.ccknbc.cc.webp
