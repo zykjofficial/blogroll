@@ -1,3 +1,5 @@
+# 这里说明，此config的大部分设置已迁移至setting.py，请到setting.py做相应修改
+
 setting:
   request: # 网络请求设置
     timeout: 10 # gitee友链配置
@@ -18,20 +20,3 @@ setting:
     repo: blogroll # 填写你的github仓库名
     state: open # 填写抓取的issue状态(open/closed)
     label: none # none关闭功能
-
-  block_word: # 屏蔽sitemap链接关键词
-    - 'index'
-    - 'json'
-    - 'tags'
-    - 'categories'
-    - 'record'
-    - 'sort'
-
-  block_chars: # 屏蔽sitemap获取标题的分割字符
-    - '|'
-    - '::'
-    - '-'
-    - '·'
-
-  block_site: # 屏蔽站点
-    - https://stevestudio.top/

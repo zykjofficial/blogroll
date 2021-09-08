@@ -11,15 +11,17 @@
 from handlers.coreSettings import config
 
 # settings.py变量的使用
-print(config.BASE_PATH)
+# print(config.BASE_PATH)
 
 # 载入的yml文件的使用,数据结构与原来一致
-print(config.yml)
+# print(config.yml)
 
 """
 import os
 
-
+"""
+综合 设置
+"""
 # 项目ROOT地址
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -35,22 +37,76 @@ LC_APPKEY = "yxmDsLg0reOEa0DXfW8cfnee"
 FRIENPAGE_LINK = "https://zhangyazhuang.gitee.io/link/"
 # FRIENPAGE_LINK = "https://blog.raxianch.moe/link"
 
-
+"""
+处理器 设置
+"""
 # 网页请求器
 # TODO 未实装
 # 超时(单位:秒)
 TIMEOUT = 10
 SSL = False
-RETRY_MAX = 5
+RETRY_MAX = 3
 
 
-# 链接处理设置
+
+"""
+功能 设置
+"""
+# github友链配置
+GITHUB_FRIENDS_LINKS = {
+    "enable": True,    # True 开启gitee issue兼容
+    "type": "normal",  # volantis用户请在这里填写 volantis
+    "owner": "ccknbc-actions",  # 填写你的github用户名
+    "repo": "blogroll",  # 填写你的github仓库名
+    "state": "open"  # 填写抓取的issue状态(open/closed)
+}
+
+# gitee友链配置
+GITEE_FRIENDS_LINKS = {
+    "enable": True,    # True 开启gitee issue兼容
+    "type": "normal",  # volantis用户请在这里填写 volantis
+    "owner": "ccknbc",  # 填写你的github用户名
+    "repo": "blogroll",  # 填写你的github仓库名
+    "state": "open"  # 填写抓取的issue状态(open/closed)
+}
 
 # 屏蔽站点
 BLOCK_SITE = [
-    "https://example.com/",
+    "https://stevestudio.top/",
+    "https://blog.cyfan.top/"
 ]
 
-# 其他设置
+# 屏蔽sitemap链接关键词
+BLOCK_WORD = [
+    "index",
+    "json",
+    "tags",
+    "categories",
+    "record",
+    "sort",
+]
+
+# 屏蔽sitemap获取标题的分割字符
+BLOCK_CHARS = [
+    "|",
+    "::",
+    "·",
+]
+
+"""
+其他设置
+"""
 # TODAY = datetime.datetime.today()
 # TIME_limit = 60
+
+# 友链列表配置文件
+CONFIG_FRIENDS_LINKS = {
+    "enable": False, # 是否启用配置项友链 True/False（此项用于针对还未适配的主题用户）
+    "list":[
+        # 格式：["name", "link", "avatar"]，除最后一行外每行后面加","，"[]"不可省略
+        # link的结尾最好加上'/'
+        # 例如：
+        ["贰猹の小窝", "https://noionion.top/", "https://pub-noionion.oss-cn-hangzhou.aliyuncs.com/head.jpg"],
+        ["小冰博客", "https://zfe.space/", "https://zfe.space/images/headimage.png"]
+    ]
+}
