@@ -1,10 +1,10 @@
 # 文章更新
-name: moments
+name: moments beta
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: "0 16 * * *"
+  schedule:
+    - cron: "0 0,4,14,18,21 * * *"
   # push:
   #   branches: main
 
@@ -24,9 +24,11 @@ jobs:
       with:
         python-version: 3.8
     - name: Install requirements #安装requests
+      working-directory: ./hexo_circle_of_friends
       run: |
-        pip install -r requirements.txt
+        pip install -r requirement.txt
     - name: Update Moments #更新
+      working-directory: ./hexo_circle_of_friends
       run: |
         python run.py ${{ secrets.APPID }} ${{ secrets.APPKEY }}  ${{ secrets.LINK }}
     - name: Delete Workflow Runs
