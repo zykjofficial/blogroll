@@ -93,6 +93,7 @@ SETTINGS_FRIENDS_LINKS={
 
 
 # get links from gitee
+# get links from gitee
 GITEE_FRIENDS_LINKS={
     "enable": True,    # True 开启gitee issue兼容
     "type": "normal",  # volantis用户请在这里填写 volantis
@@ -113,7 +114,7 @@ GITHUB_FRIENDS_LINKS = {
 
 # retry allowed
 # 爬取url失败是否重试
-RETRY_ENABLED=True
+RETRY_ENABLED=False
 
 # block site list
 # 添加屏蔽站点

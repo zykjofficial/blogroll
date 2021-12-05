@@ -5,6 +5,7 @@ import datetime
 import time
 import re
 import scrapy
+import queue
 from scrapy.http.request import Request
 from hexo_circle_of_friends import settings
 from bs4 import BeautifulSoup
@@ -19,7 +20,8 @@ class FriendpageLinkSpider(scrapy.Spider):
     start_urls = []
 
     def __init__(self, name=None, **kwargs):
-        self.friend_poor = []
+        self.friend_poor = queue.Queue()
+        self.friend_list = queue.Queue()
 
         super().__init__(name, **kwargs)
 
@@ -31,7 +33,7 @@ class FriendpageLinkSpider(scrapy.Spider):
                 # print('好友名%r' % user_info[0])
                 # print('头像链接%r' % user_info[2])
                 # print('主页链接%r' % user_info[1])
-                self.friend_poor.append(user_info)
+                self.friend_poor.put(user_info)
         if settings.GITEE_FRIENDS_LINKS['enable'] and settings.GITEE_FRIENDS_LINKS['type'] == 'normal':
             for number in range(1, 100):
                 domain = 'https://gitee.com'
@@ -63,44 +65,37 @@ class FriendpageLinkSpider(scrapy.Spider):
         # print("friend_poor_parse---------->" + response.url)
 
         if "gitee" in response.meta.keys():
-            soup = BeautifulSoup(response.text, 'lxml')
-            main_content = soup.find_all(id='git-issues')
-            linklist = main_content[0].find_all('a', {'class': 'title'})
-
-            for item in linklist:
-                issueslink = response.meta["gitee"]["domain"] + item['href']
-                yield Request(issueslink, self.friend_poor_parse, meta={"gitee-issues": None},dont_filter=True)
+            main_content = response.css("#git-issues a.title::attr(href)").extract()
+            if main_content:
+                for item in main_content:
+                    issueslink = response.meta["gitee"]["domain"] + item
+                    yield Request(issueslink, self.friend_poor_parse, meta={"gitee-issues": None},dont_filter=True)
         if "gitee-issues" in response.meta.keys():
-            issues_soup = BeautifulSoup(response.text, 'html.parser')
             try:
-                issues_linklist = issues_soup.find_all('code')
-                source = issues_linklist[0].text
+                content = ''.join(response.css("code *::text").extract())
                 user_info = []
                 info_list = ['name', 'link', 'avatar']
-                reg(info_list, user_info, source)
-                # print(user_info)
+                reg(info_list, user_info, content)
                 if user_info[1] != '你的链接':
-                    self.friend_poor.append(user_info)
+                    self.friend_poor.put(user_info)
             except:
                 pass
 
         if "github" in response.meta.keys():
-            soup = BeautifulSoup(response.text, 'lxml')
-            main_content = soup.find_all('div', {'aria-label': 'Issues'})
-            linklist = main_content[0].find_all('a', {'class': 'Link--primary'})
-            for item in linklist:
-                issueslink = response.meta["github"]["domain"] + item['href']
-                yield Request(issueslink, self.friend_poor_parse, meta={"github-issues": None},dont_filter=True)
+            main_content = response.css("div[aria-label=Issues] a.Link--primary::attr(href)").extract()
+            if main_content:
+                for item in main_content:
+                    issueslink = response.meta["github"]["domain"] + item
+                    yield Request(issueslink, self.friend_poor_parse, meta={"github-issues": None},dont_filter=True)
         if "github-issues" in response.meta.keys():
-            issues_soup = BeautifulSoup(response.text, 'html.parser')
             try:
-                issues_linklist = issues_soup.find_all('pre')
-                source = issues_linklist[0].text
-                user_info = []
-                info_list = ['name', 'link', 'avatar']
-                reg(info_list, user_info, source)
-                if user_info[1] != '你的链接':
-                    self.friend_poor.append(user_info)
+                content = ''.join(response.css("pre *::text").extract())
+                if content!='':
+                    user_info = []
+                    info_list = ['name', 'link', 'avatar']
+                    reg(info_list, user_info, content)
+                    if user_info[1] != '你的链接':
+                        self.friend_poor.put(user_info)
             except:
                 pass
 
@@ -120,7 +115,7 @@ class FriendpageLinkSpider(scrapy.Spider):
                     user_info.append(name[i])
                     user_info.append(link[i])
                     user_info.append(avatar[i])
-                    self.friend_poor.append(user_info)
+                    self.friend_poor.put(user_info)
                     user_info = []
                     # print("""------------------------\n
                     # name:%s
@@ -132,7 +127,9 @@ class FriendpageLinkSpider(scrapy.Spider):
         # print(self.friend_poor)
 
         # 要添加主题扩展，在这里添加一个请求
-        for friend in self.friend_poor:
+        while not self.friend_poor.empty():
+            friend = self.friend_poor.get()
+            self.friend_list.put(friend)
             friend[1] += "/" if not friend[1].endswith("/") else ""
             yield Request(friend[1] + "atom.xml", callback=self.post_atom_parse, meta={"friend": friend},
                           dont_filter=True, errback=self.errback_handler)
@@ -164,7 +161,8 @@ class FriendpageLinkSpider(scrapy.Spider):
         # friend = ['小冰博客', 'https://zfe.space/', 'https://zfe.space/images/headimage.png']
         # [[1,1,1],[2,3,2]]
         # 将获取到的朋友列表传递到管道
-        for friend in self.friend_poor:
+        while not self.friend_list.empty():
+            friend = self.friend_list.get()
             userdata = {}
             userdata["name"] = friend[0]
             userdata["link"] = friend[1]
@@ -204,7 +202,7 @@ class FriendpageLinkSpider(scrapy.Spider):
     def post_rss2_parse(self, response):
         # print("post_rss2_parse---------->" + response.url)
         friend = response.meta.get("friend")
-        soup = BeautifulSoup(response.text, 'lxml')
+        soup = BeautifulSoup(response.text, "lxml")
         items = soup.find_all("item")
         if not items:
             items = soup.find_all("entry")

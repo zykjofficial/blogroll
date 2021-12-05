@@ -12,6 +12,9 @@ class HexoCircleOfFriendsPipeline:
     def __init__(self):
         self.userdata = []
         self.nonerror_data = set() # 能够根据友链link获取到文章的人
+        self.total_post_num = 0
+        self.total_friend_num = 0
+        self.err_friend_num = 0
     def open_spider(self, spider):
         if settings.DEBUG:
             leancloud.init(settings.LC_APPID, settings.LC_APPKEY)
@@ -70,6 +73,10 @@ class HexoCircleOfFriendsPipeline:
 
         self.outdate_clean(settings.OUTDATE_CLEAN)
         print("----------------------")
+        print("友链总数 : %d" %self.total_friend_num)
+        print("失联友链数 : %d" % self.err_friend_num)
+        print("共 %d 篇文章"%self.total_post_num)
+
         print("done!")
 
     def query_friendspoor(self):
@@ -120,9 +127,11 @@ class HexoCircleOfFriendsPipeline:
                 # print("未失联的用户")
                 friendlist.set('error', "false")
             else:
+                self.err_friend_num+=1
                 print("请求失败，请检查链接： %s"%item[1])
                 friendlist.set('error', "true")
             friendlist.save()
+            self.total_friend_num+=1
 
     def friendpoor_push(self,item):
         friendpoor = self.Friendspoor()
@@ -137,7 +146,7 @@ class HexoCircleOfFriendsPipeline:
         print("----------------------")
         print(item["name"])
         print("《{}》\n文章发布时间：{}\t\t采取的爬虫规则为：{}".format(item["title"], item["time"], item["rule"]))
-
+        self.total_post_num +=1
 
 class DuplicatesPipeline:
     def __init__(self):
