@@ -6,7 +6,9 @@
 
 - [**点击这里！！！**](https://github.com/ccknbc-actions/blogroll/issues/new?assignees=CCKNBC&labels=%E5%B0%8F%E4%BC%99%E4%BC%B4%E4%BB%AC&template=blogroll.md&title=https%3A%2F%2Fblog.ccknbc.cc)新建一个 Issue，并按照模板提示修改你的个人信息。
 
-- 等待管理员审核，管理员打上标签就代表审核通过啦，请注意留意回复信息。
+- ~~等待管理员审核，管理员打上标签就代表审核通过啦，请注意留意回复信息~~。
+
+- 目前打标签这一动作由你完成
 
 ## 如何更新自己的博客链接
 

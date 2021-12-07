@@ -1,13 +1,10 @@
 ---
 name: 申请友链
-about: 如果你要申请CC的友链可以在这里申请哦!注意请将 Title 改为你的网站完整地址哦！
-title: 'https://blog.ccknbc.cc'
-labels: '小伙伴们'
-assignees: 'CCKNBC'
+about: 如果你要申请CC的友链可以在这里申请哦，注意请将 Title 改为你的网站完整地址哦！
+title: 标题请书写你的链接，不要写其他内容
+labels: 小伙伴们
+assignees: CCKNBC
 ---
-
-**标题请书写你的链接，不要写其他内容**
-
 ```yaml
 # 显示名称
 name: 

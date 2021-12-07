@@ -4,8 +4,8 @@ name: blogroll
 on:
   repository_dispatch:
   workflow_dispatch:
-  issues: 
-    types: [opened,labeled, unlabeled, edited, closed, reopened, deleted]
+  issues:
+    types: [labeled, unlabeled, edited, closed, reopened, deleted]
   # push:
   #   branches: main
 
