@@ -4,7 +4,7 @@
 
 ## 如何申请
 
-- [**点击这里！！！**](https://github.com/ccknbc-actions/blogroll/issues/new?assignees=CCKNBC&labels=%E5%B0%8F%E4%BC%99%E4%BC%B4%E4%BB%AC&template=blogroll.md&title=https%3A%2F%2Fblog.ccknbc.cc)新建一个 Issue，并按照模板提示修改你的个人信息。
+- [**点击这里！！！**](https://github.com/ccknbc-actions/blogroll/issues/new?labels=小伙伴们&template=blogroll.md&title=标题请书写你的链接，不要写其他内容)新建一个 Issue，并按照模板提示修改你的个人信息。
 
 - ~~等待管理员审核，管理员打上标签就代表审核通过啦，请注意留意回复信息~~。
 
