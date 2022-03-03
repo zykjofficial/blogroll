@@ -1,13 +1,13 @@
 name: screenshots
-on: 
+on:
   repository_dispatch:
   workflow_dispatch:
-  issues: 
-    types: [labeled, unlabeled, edited, closed, reopened, deleted]
+  # issues:
+  #   types: [labeled, unlabeled, edited, closed, reopened, deleted]
   schedule:
-    - cron: '0 16 * * *'  
-  # push:
-  #   branches: main
+    - cron: '0 16 * * *'
+  push:
+    branches: main
 
 jobs:
   download:
@@ -17,12 +17,12 @@ jobs:
     steps:
     - name: 检查分支
       uses: actions/checkout@main
-      
+
     - name: 安装Node
       uses: actions/setup-node@main
       with:
         node-version: "12.x"
-    
+
     - name: 缓存依赖
       uses: actions/cache@main
       id: cache-dependencies
@@ -46,10 +46,10 @@ jobs:
 
     - name: 执行
       run: |
-        python screenshots.py
+        mkdir img
         curl https://2s9e3bif52.execute-api.eu-central-1.amazonaws.com/production/screenshot?url=https://www.ccknbc.cc -o ./img/www.ccknbc.cc.png
         curl https://2s9e3bif52.execute-api.eu-central-1.amazonaws.com/production/screenshot?url=https://blog.ccknbc.cc -o ./img/blog.ccknbc.cc.png
-      
+
     - name: 压缩图片为webp
       run: |
         node imagemin.js
