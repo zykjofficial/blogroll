@@ -1,9 +1,6 @@
 {
     "version": 2,
     "public": true,
-    "github": {
-        "silent": true
-    },
     "builds": [{ "src": "api/main.py", "use": "@vercel/python" }],
     "routes": [
         { "src": "/all", "dest": "api/main.py" },

@@ -3,7 +3,8 @@
 # 参数说明：
 # link：必填，在这里填写你的友链页面地址
 # theme：必填，友链页的获取策略。需要指定该页面的主题，可选参数如下（这些是目前支持的主题）：
-#   - common: 通用主题，请参考：https://fcircle-doc.js.cool/#/developmentdoc?id=友链页适配
+#   - common1: 通用主题1，请参考：https://fcircle-doc.js.cool/#/developmentdoc?id=友链页适配
+#   - common2: 通用主题2，请参考：https://fcircle-doc.js.cool/#/developmentdoc?id=友链页适配
 #   - butterfly：butterfly主题
 #   - fluid：fluid主题
 #   - matery：matery主题
@@ -19,10 +20,10 @@ LINK = [
         "link": "https://blog.ccknbc.cc/blogroll/",  # 友链页地址1，修改为你的友链页地址
         "theme": "butterfly"
     },
-    # {
-    #     "link": "https://www.antmoe.com/friends/",  # 友链页地址2
+    #     {
+    #     "link": "https://noionion.top/link/",  # 友链页地址2
     #     "theme": "butterfly",  # 友链页的获取策略
-    # }
+    # },
     #     {
     #     "link": "https://immmmm.com/about/",  # 友链页地址3
     #     "theme": "common",  # 友链页的获取策略
@@ -32,31 +33,31 @@ LINK = [
 
 # 配置项友链
 # enable：# 是否启用配置项友链 True/False（针对还未适配主题或者有定制需求的用户）
-# json_api：通过api获取配置项友链，返回格式必须为：{"friends":[[友链1],[友链2],[友链3],[友链4]....]}，友链内容同list字段格式
+# json_api：通过api获取配置项友链，返回格式必须为：{"friends":[[友链1],[友链2],[友链3],[友链4]....]}，友链内容同LINK字段格式
 # list字段填写格式：["name", "link", "avatar","suffix"]，其中：
 #       name：必填，友链的名字
 #       link：必填，友链主页地址
 #       avatar：必填，头像地址
 #       suffix：选填，自定义订阅后缀，主要针对不规范的网站订阅后缀，见示例2
 SETTINGS_FRIENDS_LINKS = {
-    "enable": False,
-    "json_api": "https://moments.ccknbc.vercel.app/friend",
+    "enable": True,
+    "json_api": "https://blogroll.ccknbc.vercel.app/fcircle.json",
     "list": [
         # 示例1：
-        # ["贰猹の小窝", "https://noionion.top/", "https://pub-noionion.oss-cn-hangzhou.aliyuncs.com/head.jpg"],
-        # ["Akilarの糖果屋", "https://akilar.top/", "https://akilar.top/images/headimage.png"],
+        ["贰猹の小窝", "https://noionion.top/", "https://pub-noionion.oss-cn-hangzhou.aliyuncs.com/head.jpg"],
+        ["Akilarの糖果屋", "https://akilar.top/", "https://akilar.top/images/headimage.png"],
         # 示例2：使用suffix的配置如下
         # 程序目前自动获取 "atom.xml", "feed/atom", "rss.xml", "rss2.xml", "feed", "index.xml" 这些后缀
         # 如果目标地址的后缀不在其中，就可以在这里添加
         # 比如 https://elizen.me/hello.xml ，填写：
-        # ["elizen", "https://elizen.me/", "https://akilar.top/images/headimage.png", "hello.xml"],
+        ["elizen", "https://elizen.me/", "https://akilar.top/images/headimage.png", "hello.xml"],
     ]
 }
 
 # get links from gitee
 # 从gitee issue中获取友链
 GITEE_FRIENDS_LINKS = {
-    "enable": True,  # True 开启gitee issue兼容
+    "enable": False,  # True 开启gitee issue兼容
     "type": "normal",  # volantis/stellar用户请在这里填写volantis
     "owner": "ccknbc",  # 填写你的gitee用户名
     "repo": "blogroll",  # 填写你的gitee仓库名
@@ -66,7 +67,7 @@ GITEE_FRIENDS_LINKS = {
 # get links from github
 # 从github issue中获取友链
 GITHUB_FRIENDS_LINKS = {
-    "enable": True,  # True 开启github issue兼容
+    "enable": False,  # True 开启github issue兼容
     "type": "normal",  # volantis/stellar用户请在这里填写volantis
     "owner": "ccknbc-actions",  # 填写你的github用户名
     "repo": "blogroll",  # 填写你的github仓库名
@@ -76,21 +77,8 @@ GITHUB_FRIENDS_LINKS = {
 # block site list
 # 添加屏蔽站点
 BLOCK_SITE = [
-    "https://webify.cloudbase.net/",
-    "https://ranas.cn/",
-    "https://stevestudio.top/",
-    "https://ranas.cn/",
-    "https://stevestudio.top/",
-    "https://webify.cloudbase.net/",
-    "https://www.cxplay.org/",
-    "https://blog.huran.xyz/",
-    "https://6ing.xyz/",
-    "https://www.yyyzyyyz.cn/",
-    "https://kindle-deep.github.io/",
-    "https://zykj.js.org/",
-    "https://blog.lete114.top/",
-    "https://sutianxin.top/",
-    "https://ql-isaac.cn/"
+    # "https://example.com/",
+    # "https://example.com/",
 ]
 
 # 启用HTTP代理，此项设为True，并且需要添加一个环境变量，名称为PROXY，值为[IP]:[端口]，比如：192.168.1.106:8080
