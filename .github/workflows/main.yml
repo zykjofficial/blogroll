@@ -1,42 +1,46 @@
 name: update-friends-posts
 
-on:
+on: 
   push:
-    branches: main
+    branches: 
+     - master
   schedule:
     - cron: "0 0,6,12,18,21 * * *"
-  workflow_dispatch:
+  watch:
+    types: [started]
 
 env:
   # 在这里查看需要添加的secert
   # 通用配置
   STORAGE_TYPE: leancloud # 请修改为你的存储方式，默认为leancloud
-  # PROXY: ${{ secrets.PROXY }} # 可选，http代理
-  # leancloud、mysql、sqlite配置三选一即可
+  PROXY: ${{ secrets.PROXY }} # 可选，http代理
+  # leancloud、mysql、sqlite、mongodb配置四选一即可
   # leancloud配置
   APPID: ${{ secrets.APPID }}
   APPKEY: ${{ secrets.APPKEY }}
   # mysql配置
-  # MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }} # 登录用户名
-  # MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }} # 登录密码
-  # MYSQL_IP: ${{ secrets.MYSQL_IP }} # 数据库IP地址
-  # MYSQL_DB: ${{ secrets.MYSQL_DB }} # 要连接到的库的名称
+  MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }} # 登录用户名
+  MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }} # 登录密码
+  MYSQL_IP: ${{ secrets.MYSQL_IP }} # 数据库IP地址
+  MYSQL_PORT: ${{ secrets.MYSQL_PORT }} # 数据库端口号
+  MYSQL_DB: ${{ secrets.MYSQL_DB }} # 要连接到的库的名称
   # sqlite配置，用于将db文件上传到github仓库
-  # GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
-  # GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
-  # GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
+  GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
+  GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
   # mongodb配置
-  # MONGODB_URI: ${{ secrets.MONGODB_URI }}  # mongodb URI 支持'mongodb://'和'mongodb+srv://'
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}  # mongodb URI 支持'mongodb://'和'mongodb+srv://'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event.repository.owner.id == github.event.sender.id  # 自己点的 start
     steps:
     - name: Checkout
-      uses: actions/checkout@main
+      uses: actions/checkout@master
 
     - name: Set up Python
-      uses: actions/setup-python@main
+      uses: actions/setup-python@v1
       with:
         python-version: 3.8
 
@@ -51,9 +55,9 @@ jobs:
         APP_ID: ${{ secrets.APPID }}
         APP_KEY: ${{ secrets.APPKEY }}
         LINK: ${{ secrets.LINK }}
-        # PROXY: ${{ secrets.PROXY }}
+        PROXY: ${{ secrets.PROXY }}
       working-directory: ./hexo_circle_of_friends
-      run: |
+      run: | 
         python run.py
 
     - name: mysql Update posts # mysql
@@ -76,7 +80,7 @@ jobs:
 
     - name: Push sqlite data # sqlite push
       if: ${{ env.STORAGE_TYPE == 'sqlite' }}
-      uses: github-actions-x/commit@v2.8
+      uses: github-actions-x/commit@v2.9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: "Update data.db"
@@ -85,8 +89,10 @@ jobs:
         name: ${{ env.GITHUB_NAME }}
         email: ${{ env.GITHUB_EMAIL }}
 
-    - name: Delete Workflow Runs
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-        retain_days: 1
-        keep_minimum_runs: 1
+    - name: mongodb Update posts # mongodb
+      if: ${{ env.STORAGE_TYPE == 'mongodb' }}
+      env:
+        MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      working-directory: ./hexo_circle_of_friends
+      run: |
+        python run.py
