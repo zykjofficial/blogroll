@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.11.0b1-slim-buster
 MAINTAINER yyyz
 COPY . /
 ### 在这里配置环境变量
