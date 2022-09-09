@@ -1,4 +1,4 @@
-FROM python:3.10.4-slim-bullseye
+FROM python:3.10.6-slim-bullseye
 MAINTAINER yyyz
 COPY . /
 ### 在这里配置环境变量
