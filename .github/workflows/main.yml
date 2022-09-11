@@ -3,7 +3,7 @@ name: update-friends-posts
 on: 
   push:
     branches: 
-     - master
+     - main
   schedule:
     - cron: "0 0,6,12,18,21 * * *"
   repository_dispatch:
@@ -46,7 +46,6 @@ jobs:
         cache-dependency-path: 'hexo_circle_of_friends/requirements.txt'
 
     - name: Install requirements
-      working-directory: ./hexo_circle_of_friends
       run: |
         pip install -r hexo_circle_of_friends/requirements.txt
 
