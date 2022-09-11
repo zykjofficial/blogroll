@@ -43,7 +43,14 @@ jobs:
       with:
         python-version: 3.8
         cache: 'pip'
-        cache-dependency-path: 'hexo_circle_of_friends/requirements.txt'
+        cache-dependency-path: '**/requirements.txt'
+        
+    - uses: actions/cache@main
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
 
     - name: Install requirements
       run: |
