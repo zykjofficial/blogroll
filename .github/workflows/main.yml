@@ -43,19 +43,22 @@ jobs:
       with:
         python-version: 3.8
         cache: 'pip'
-        cache-dependency-path: '**/requirements.txt'
+        cache-dependency-path: 'hexo_circle_of_friends/requirements.txt'
         
     - uses: actions/cache@main
       id: cache-pip-modules
       with:
+        working-directory: ./hexo_circle_of_friends
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('hexo_circle_of_friends/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
     - name: Install requirements
       if: steps.cache-pip-modules.outputs.cache-hit != 'true'
-      run: pip install -r hexo_circle_of_friends/requirements.txt
+      working-directory: ./hexo_circle_of_friends
+      run: | 
+        pip install -r requirements.txt
 
     - name: leancloud Update posts # leancloud
       if: ${{ env.STORAGE_TYPE == 'leancloud' }}
