@@ -46,6 +46,7 @@ jobs:
         cache-dependency-path: '**/requirements.txt'
         
     - uses: actions/cache@main
+      id: cache-pip-modules
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -53,8 +54,8 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Install requirements
-      run: |
-        pip install -r hexo_circle_of_friends/requirements.txt
+      if: steps.cache-pip-modules.outputs.cache-hit != 'true'
+      run: pip install -r hexo_circle_of_friends/requirements.txt
 
     - name: leancloud Update posts # leancloud
       if: ${{ env.STORAGE_TYPE == 'leancloud' }}
