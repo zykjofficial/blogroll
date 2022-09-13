@@ -2,8 +2,6 @@ name: screenshots
 on:
   repository_dispatch:
   workflow_dispatch:
-  # issues:
-  #   types: [labeled, unlabeled, edited, closed, reopened, deleted]
   schedule:
     - cron: '0 16 * * *'
   push:
@@ -18,68 +16,25 @@ jobs:
     - name: 检查分支
       uses: actions/checkout@main
 
-    - name: 安装Node
-      uses: actions/setup-node@main
-      with:
-        node-version: "12.x"
-
-    - name: 缓存依赖
-      uses: actions/cache@main
-      id: cache-dependencies
-      with:
-        path: node_modules
-        key: ${{runner.OS}}-${{hashFiles('**/package-lock.json')}}
-
-    - name: 安装依赖
-      if: steps.cache-dependencies.outputs.cache-hit != 'true'
-      run: |
-        npm install imagemin imagemin-webp
-
-    - name: 安装Python
-      uses: actions/setup-python@main
-      with:
-        python-version: 3.8
-
-    - name: Install requirements #安装requests
-      run: |
-        pip install requests
-
     - name: 执行
       run: |
         mkdir img
-        curl https://2s9e3bif52.execute-api.eu-central-1.amazonaws.com/production/screenshot?url=https://www.ccknbc.cc -o ./img/www.ccknbc.cc.png
-        curl https://2s9e3bif52.execute-api.eu-central-1.amazonaws.com/production/screenshot?url=https://blog.ccknbc.cc -o ./img/blog.ccknbc.cc.png
-
-    - name: 压缩图片为webp
-      run: |
-        node imagemin.js
-
-    - name: 更新友链截图
-      run: |
-        cd ./webp
-        git config --global init.defaultBranch master
-        git branch -m master
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git init
-        git add -A
-        git commit -m "$(date +"%Z %Y-%m-%d %A %H:%M:%S") Updated By Github Actions"
-        git push --force --quiet "https://ccknbc:${{ secrets.GITHUB_TOKEN }}@github.com/ccknbc-actions/blogroll.git" master:webp
+        curl https://image.thum.io/get/width/1280/crop/960/allowJPG/wait/20/noanimate/https://zykj.js.org -o ./img/zykj.js.org.png
+    
+    - name: 部署
+      env:
+        TZ: Asia/Shanghai
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./img
+        full_commit_message: 'Updated By Github Actions'
 
     - name: 刷新jsd缓存
-      run: curl https://purge.jsdelivr.net/gh/ccknbc-actions/blogroll@webp/
+      run: curl https://purge.jsdelivr.net/gh/${{ github.repository }}/blogroll@gh-pages/
 
     - name: Delete Workflow Runs
       uses: Mattraks/delete-workflow-runs@main
       with:
         retain_days: 1
         keep_minimum_runs: 1
-
-    # - name: Telegram Notification
-    #   if: cancelled() == false
-    #   uses: xinthink/action-telegram@v1.1
-    #   with:
-    #     botToken: ${{ secrets.TG_BOT_TOKEN }} #use bot @BotFather
-    #     chatId: ${{ secrets.TG_CHAT_ID }} #use bot @userinfobot
-    #     jobStatus: ${{ job.status }}
-    #     skipSuccess: false

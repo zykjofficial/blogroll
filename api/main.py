@@ -37,6 +37,11 @@ app.add_middleware(
 )
 
 
+@app.get("/blogroll", tags=["API"], summary="返回完整友链信息")
+def blogroll():
+    return requests.get(url="https://raw.githubusercontent.com/zykjofficial/my-friend/gh-pages/blogroll.json").json()
+
+
 @app.get("/all", tags=["API"], summary="返回完整统计信息")
 def all(start: int = 0, end: int = -1, rule: str = "updated"):
     """返回数据库统计信息和文章信息列表

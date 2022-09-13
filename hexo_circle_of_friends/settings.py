@@ -17,7 +17,7 @@
 # 支持配置多个友链页面并指定不同主题策略，每个用{}分隔，它们会被同时爬取，数据保存在一起。***至少配置一个***
 LINK = [
     {
-        "link": "https://blog.ccknbc.cc/blogroll/",  # 友链页地址1，修改为你的友链页地址
+        "link": "https://zykj.js.org/link/",  # 友链页地址1，修改为你的友链页地址
         "theme": "butterfly"
     },
     #     {
@@ -41,16 +41,8 @@ LINK = [
 #       suffix：选填，自定义订阅后缀，主要针对不规范的网站订阅后缀，见示例2
 SETTINGS_FRIENDS_LINKS = {
     "enable": True,
-    "json_api": "https://blogroll.ccknbc.vercel.app/fcircle.json",
+    "json_api": "https://raw.githubusercontent.com/zykjofficial/my-friend/gh-pages/fcircle.json",
     "list": [
-        # 示例1：
-        # ["贰猹の小窝", "https://noionion.top/", "https://pub-noionion.oss-cn-hangzhou.aliyuncs.com/head.jpg"],
-        # ["Akilarの糖果屋", "https://akilar.top/", "https://akilar.top/images/headimage.png"],
-        # 示例2：使用suffix的配置如下
-        # 程序目前自动获取 "atom.xml", "feed/atom", "rss.xml", "rss2.xml", "feed", "index.xml" 这些后缀
-        # 如果目标地址的后缀不在其中，就可以在这里添加
-        # 比如 https://elizen.me/hello.xml ，填写：
-        # ["elizen", "https://elizen.me/", "https://akilar.top/images/headimage.png", "hello.xml"],
     ]
 }
 
@@ -77,7 +69,7 @@ GITHUB_FRIENDS_LINKS = {
 # block site list
 # 添加屏蔽站点，支持正则表达式
 BLOCK_SITE = [
-    # "https://webify.cloudbase.net/",
+    "https://webify.cloudbase.net/",
     # r".*\.com",  # 含有.com的全部屏蔽
     # r"^http://",  # http开头的全部屏蔽
 ]
