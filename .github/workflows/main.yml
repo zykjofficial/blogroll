@@ -1,18 +1,17 @@
 name: update-friends-posts
 
-on: 
+on:
   push:
-    branches: 
-     - main
+    branches:
+      - main
   schedule:
     - cron: "0 0,6,12,18,21 * * *"
-  repository_dispatch:
   workflow_dispatch:
 
 env:
   # 在这里查看需要添加的secert
   # 通用配置
-  STORAGE_TYPE: leancloud # 请修改为你的存储方式，默认为leancloud
+  STORAGE_TYPE: ${{ secrets.STORAGE_TYPE }} # 请修改为你的存储方式，默认为leancloud
   PROXY: ${{ secrets.PROXY }} # 可选，http代理
   # leancloud、mysql、sqlite、mongodb配置四选一即可
   # leancloud配置
@@ -30,6 +29,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
   # mongodb配置
   MONGODB_URI: ${{ secrets.MONGODB_URI }}  # mongodb URI 支持'mongodb://'和'mongodb+srv://'
+  TZ: Asia/Shanghai
 
 jobs:
   build:
@@ -42,31 +42,25 @@ jobs:
       uses: actions/setup-python@main
       with:
         python-version: 3.8
-        cache: 'pip'
-        cache-dependency-path: 'hexo_circle_of_friends/requirements.txt'
-        
-    - uses: actions/cache@main
-      id: cache-pip-modules
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
 
     - name: Install requirements
       working-directory: ./hexo_circle_of_friends
-      run: | 
+      run: |
         pip install -r requirements.txt
+
+    - name: set env
+      run: |
+        echo "BASE_PATH=$(pwd)" >> $GITHUB_ENV && echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
     - name: leancloud Update posts # leancloud
       if: ${{ env.STORAGE_TYPE == 'leancloud' }}
       env:
-        APP_ID: ${{ secrets.APPID }}
-        APP_KEY: ${{ secrets.APPKEY }}
+        APPID: ${{ secrets.APPID }}
+        APPKEY: ${{ secrets.APPKEY }}
         LINK: ${{ secrets.LINK }}
         PROXY: ${{ secrets.PROXY }}
       working-directory: ./hexo_circle_of_friends
-      run: | 
+      run: |
         python run.py
 
     - name: mysql Update posts # mysql
@@ -83,6 +77,7 @@ jobs:
     - name: sqlite Update posts # sqlite
       if: ${{ env.STORAGE_TYPE == 'sqlite' }}
       env:
+        PYTHONPATH: ${{ env.PYTHONPATH }}
         SQLITE_DB: ${{ secrets.SQLITE_DB }}
       run: |
         python ./hexo_circle_of_friends/run.py
@@ -105,3 +100,6 @@ jobs:
       working-directory: ./hexo_circle_of_friends
       run: |
         python run.py
+        
+    - name: keep alive
+      uses: gautamkrishnar/keepalive-workflow@master # keep workflows from being suspended when no commit for a long time

@@ -2,50 +2,28 @@
 
 import os
 import json
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import requests
+from fastapi import Depends
 from urllib import parse
-from hexo_circle_of_friends import settings
-from sqlalchemy import create_engine
-from hexo_circle_of_friends.models import Friend, Post
-from sqlalchemy.orm import sessionmaker, scoped_session
+from jose import JWTError
+from hexo_circle_of_friends.utils.project import get_user_settings
+from hexo_circle_of_friends.models import Friend, Post, Auth
 from sqlalchemy.sql.expression import desc, func
 from hexo_circle_of_friends.utils.process_time import time_compare
-
-
-def db_init():
-    if settings.DEBUG:
-        if settings.DATABASE == "sqlite":
-            conn = "sqlite:///" + BASE_DIR + "/data.db" + "?check_same_thread=False"
-        elif settings.DATABASE == "mysql":
-            conn = "mysql+pymysql://%s:%s@%s:3306/%s?charset=utf8mb4" \
-                   % ("root", "123456", "localhost", "test")
-    else:
-        if settings.DATABASE == "sqlite":
-            conn = "sqlite:///" + BASE_DIR + "/data.db" + "?check_same_thread=False"
-        elif settings.DATABASE == "mysql":
-            conn = "mysql+pymysql://%s:%s@%s:%s/%s?charset=utf8mb4" \
-                   % (os.environ["MYSQL_USERNAME"], os.environ["MYSQL_PASSWORD"], os.environ["MYSQL_IP"]
-                      , os.environ["MYSQL_PORT"], os.environ["MYSQL_DB"])
-    try:
-        engine = create_engine(conn, pool_recycle=-1)
-    except:
-        raise Exception("MySQL连接失败")
-    Session = sessionmaker(bind=engine)
-    session = scoped_session(Session)
-    return session
+from api_dependencies.utils.validate_params import start_end_check
+from api_dependencies.utils.github_interface import create_or_update_file, get_b64encoded_data
+from api_dependencies.sql import db_interface, security
+from api_dependencies import format_response, tools, dependencies as dep
 
 
 def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
-    session = db_init()
+    session = db_interface.db_init()
     article_num = session.query(Post).count()
-    if end == -1:
-        end = min(article_num, 1000)
-    if start < 0 or start >= min(article_num, 1000):
-        return {"message": "start error"}
-    if end <= 0 or end > min(article_num, 1000):
-        return {"message": "end error"}
+    # 检查start、end的合法性
+    start, end, message = start_end_check(start, end, article_num)
+    if message:
+        return {"message": message}
+    # 检查rule的合法性
     if rule != "created" and rule != "updated":
         return {"message": "rule error, please use 'created'/'updated'"}
 
@@ -78,7 +56,7 @@ def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
 
 
 def query_friend():
-    session = db_init()
+    session = db_interface.db_init()
     friends = session.query(Friend).limit(1000).all()
     session.close()
 
@@ -101,8 +79,9 @@ def query_friend():
 def query_random_friend(num):
     if num < 1:
         return {"message": "param 'num' error"}
-    session = db_init()
-    if settings.DATABASE == "sqlite":
+    session = db_interface.db_init()
+    settings = get_user_settings()
+    if settings["DATABASE"] == "sqlite":
         data: list = session.query(Friend).order_by(func.random()).limit(num).all()
     else:
         data: list = session.query(Friend).order_by(func.rand()).limit(num).all()
@@ -125,8 +104,9 @@ def query_random_friend(num):
 def query_random_post(num):
     if num < 1:
         return {"message": "param 'num' error"}
-    session = db_init()
-    if settings.DATABASE == "sqlite":
+    session = db_interface.db_init()
+    settings = get_user_settings()
+    if settings["DATABASE"] == "sqlite":
         data: list = session.query(Post).order_by(func.random()).limit(num).all()
     else:
         data: list = session.query(Post).order_by(func.rand()).limit(num).all()
@@ -150,7 +130,7 @@ def query_random_post(num):
 
 
 def query_post(link, num, rule, ):
-    session = db_init()
+    session = db_interface.db_init()
     if link is None:
         user = session.query(Friend).filter_by(error=False).order_by(func.random()).first()
         domain = parse.urlsplit(user.link).netloc
@@ -176,7 +156,7 @@ def query_post(link, num, rule, ):
     if user:
         api_json = {
             "statistical_data": {
-                "author": user.name,
+                "name": user.name,
                 "link": user.link,
                 "avatar": user.avatar,
                 "article_num": len(posts)
@@ -192,7 +172,7 @@ def query_post(link, num, rule, ):
 
 def query_friend_status(days):
     # 初始化数据库连接
-    session = db_init()
+    session = db_interface.db_init()
     # 查询
     posts = session.query(Post).all()
     friends = session.query(Friend).all()
@@ -221,7 +201,7 @@ def query_friend_status(days):
 
 
 def query_post_json(jsonlink, list, start, end, rule):
-    session = db_init()
+    session = db_interface.db_init()
 
     headers = {
         "Cookie": "arccount62298=c; arccount62019=c",
@@ -279,3 +259,58 @@ def query_post_json(jsonlink, list, start, end, rule):
     }
     data['article_data'] = post_data
     return data
+
+
+async def login_with_token_(token: str = Depends(dep.oauth2_scheme)):
+    # 获取或者创建（首次）secret_key
+    secert_key = await security.get_secret_key()
+    try:
+        payload = dep.decode_access_token(token, secert_key)
+    except JWTError:
+        raise format_response.CredentialsException
+
+    return payload
+
+
+async def login_(password: str):
+    session = db_interface.db_init()
+    auth = session.query(Auth).all()
+    # 获取或者创建（首次）secret_key
+    secret_key = await security.get_secret_key()
+    if not auth:
+        # turn plain pwd to hashed pwd
+        password_hash = dep.create_password_hash(password)
+        # 未保存pwd，生成对应token并保存
+        data = {"password_hash": password_hash}
+        token = dep.encode_access_token(data, secret_key)
+        tb_obj = Auth(password=password_hash)
+        session.add(tb_obj)
+        session.commit()
+        session.close()
+        if tools.is_vercel():
+            # github+vercel将db上传
+            db_path = "/tmp/data.db"
+            with open(db_path, "rb") as f:
+                data = f.read()
+            gh_access_token = os.environ.get("GH_TOKEN", "")
+            gh_name = os.environ.get("GH_NAME", "")
+            gh_email = os.environ.get("GH_EMAIL", "")
+            repo_name = "hexo-circle-of-friends"
+            message = "Update data.db"
+            await create_or_update_file(gh_access_token, gh_name, gh_email, repo_name,
+                                        "data.db",
+                                        get_b64encoded_data(data), message)
+    elif len(auth) == 1:
+        # 保存了pwd，通过pwd验证
+        if dep.verify_password(password, auth[0].password):
+            # 更新token
+            data = {"password_hash": auth[0].password}
+            token = dep.encode_access_token(data, secret_key)
+        else:
+            # 401
+            return format_response.CredentialsException
+    else:
+        # 401
+        return format_response.CredentialsException
+
+    return format_response.standard_response(token=token)

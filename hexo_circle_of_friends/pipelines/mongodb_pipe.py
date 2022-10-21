@@ -4,10 +4,10 @@ import os
 import re
 from datetime import datetime, timedelta
 from pymongo import MongoClient
-from .. import settings
+from ..utils import baselogger
 
-today = (datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
-
+today = (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
+logger = baselogger.get_logger(__name__)
 
 class MongoDBPipeline:
     def __init__(self):
@@ -16,12 +16,12 @@ class MongoDBPipeline:
         self.query_post_list = []
 
     def open_spider(self, spider):
-
-        if settings.DEBUG:
-            URI = "mongodb+srv://root:@cluster0.wgfbv.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+        settings = spider.settings
+        if settings["DEBUG"]:
+            uri = "mongodb+srv://yyyz:etmTvVcvOGlSINSm@cluster0.c6dgw.mongodb.net/?retryWrites=true&w=majority"
         else:
-            URI = os.environ.get("MONGODB_URI")
-        client = MongoClient(URI)
+            uri = os.environ.get("MONGODB_URI")
+        client = MongoClient(uri)
         db = client.fcircle
         self.posts = db.Post
         self.friends = db.Friend
@@ -30,7 +30,7 @@ class MongoDBPipeline:
         self.query_post()
 
         self.friends.delete_many({})
-        print("Initialization complete")
+        logger.info("Initialization complete")
 
     def process_item(self, item, spider):
         if "userdata" in item.keys():
@@ -67,15 +67,15 @@ class MongoDBPipeline:
     def close_spider(self, spider):
         # print(self.nonerror_data)
         # print(self.userdata)
-
-        count, error_num = self.friendlist_push()
-        self.outdate_clean(settings.OUTDATE_CLEAN)
-        print("----------------------")
-        print("友链总数 : %d" % count)
-        print("失联友链数 : %d" % error_num)
-        print("共 %d 篇文章" % self.posts.count_documents({}))
-        print("最后运行于：%s" % today)
-        print("done!")
+        settings = spider.settings
+        count, error_num = self.friendlist_push(settings)
+        self.outdate_clean(settings["OUTDATE_CLEAN"])
+        logger.info("----------------------")
+        logger.info("友链总数 : %d" % count)
+        logger.info("失联友链数 : %d" % error_num)
+        logger.info("共 %d 篇文章" % self.posts.count_documents({}))
+        logger.info("最后运行于：%s" % today)
+        logger.info("done!")
 
     def query_post(self):
         try:
@@ -92,7 +92,7 @@ class MongoDBPipeline:
             updated = query_item.get("updated")
             try:
                 query_time = datetime.strptime(updated, "%Y-%m-%d")
-                if (datetime.today() + timedelta(hours=8) - query_time).days > time_limit:
+                if (datetime.utcnow() + timedelta(hours=8) - query_time).days > time_limit:
                     result = self.posts.delete_one({"_id": query_item.get("_id")})
                     out_date_post += 1
             except:
@@ -103,7 +103,7 @@ class MongoDBPipeline:
         # print('\n')
         # print('-------结束删除规则----------')
 
-    def friendlist_push(self):
+    def friendlist_push(self, settings):
         friends = []
         error_num = 0
         for user in self.userdata:
@@ -116,18 +116,18 @@ class MongoDBPipeline:
             if user[0] in self.nonerror_data:
                 # print("未失联的用户")
                 friend["error"] = False
-            elif settings.BLOCK_SITE:
+            elif settings["BLOCK_SITE"]:
                 error = True
-                for url in settings.BLOCK_SITE:
+                for url in settings["BLOCK_SITE"]:
                     if re.match(url, friend["link"]):
                         friend["error"] = False
                         error = False
                 if error:
-                    print("请求失败，请检查链接： %s" % friend["link"])
+                    logger.error("请求失败，请检查链接： %s" % friend["link"])
                     friend["error"] = True
                     error_num += 1
             else:
-                print("请求失败，请检查链接： %s" % friend["link"])
+                logger.error("请求失败，请检查链接： %s" % friend["link"])
                 friend["error"] = True
                 error_num += 1
             friends.append(friend)
@@ -136,16 +136,17 @@ class MongoDBPipeline:
             try:
                 self.friends.replace_one({"link": friend.get("link")}, friend, upsert=True)
             except:
-                print("上传数据失败，请检查：%s" % friend.get("link"))
+                logger.error("上传数据失败，请检查：%s" % friend.get("link"))
         return len(friends), error_num
 
-    def friendpoor_push(self,item):
+    def friendpoor_push(self, item):
         item["createdAt"] = today
         try:
             self.posts.replace_one({"link": item.get("link")}, item, upsert=True)
         except:
             pass
-        print("----------------------")
-        print(item["author"])
-        print("《{}》\n文章发布时间：{}\t\t采取的爬虫规则为：{}".format(item["title"], item["created"], item["rule"]))
 
+        info = f"""\033[1;34m\n——————————————————————————————————————————————————————————————————————————————
+{item['author']}\n《{item['title']}》\n文章发布时间：{item['created']}\t\t采取的爬虫规则为：{item['rule']}
+——————————————————————————————————————————————————————————————————————————————\033[0m"""
+        logger.info(info)

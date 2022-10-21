@@ -1,38 +1,20 @@
 # -*- coding:utf-8 -*-
 # Author：yyyz
 import datetime
-import sys
 import scrapy
 import queue
 import feedparser
 import re
-import logging
-from logging import handlers
 from scrapy.http.request import Request
-from hexo_circle_of_friends import settings
 from hexo_circle_of_friends.utils.get_url import GetUrl
 from hexo_circle_of_friends.utils.regulations import reg_volantis, reg_normal
 from hexo_circle_of_friends.utils.process_time import format_time
+from hexo_circle_of_friends.utils.baselogger import get_logger
 
 # from hexo_circle_of_friends import items todo use items
 
 # 日志记录配置
-if sys.platform == "linux":
-    # linux，输出到文件
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING)
-    handler = handlers.RotatingFileHandler("/tmp/crawler.log", mode="w", maxBytes=1024, backupCount=3, encoding="utf-8")
-    logger.addHandler(handler)
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-    handler.setFormatter(formatter)
-else:
-    # 其它平台，标准输出
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING)
-    handler = logging.StreamHandler(sys.stderr)
-    logger.addHandler(handler)
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-    handler.setFormatter(formatter)
+logger = get_logger(__name__)
 # post_parsers = ["theme_butterfly_parse"]
 # 文章页解析器
 post_parsers = [
@@ -63,7 +45,7 @@ class FriendpageLinkSpider(scrapy.Spider):
         self.friend_poor = queue.Queue()
 
         self.friend_list = queue.Queue()
-        self.today = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime('%Y-%m-%d')
+        self.today = (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).strftime('%Y-%m-%d')
         self.friend_url_parser = GetUrl()
 
         super(FriendpageLinkSpider, self).__init__(name, **kwargs)
@@ -74,18 +56,18 @@ class FriendpageLinkSpider(scrapy.Spider):
             for li in self.settings.get("SETTINGS_FRIENDS_LINKS").get("list"):
                 self.friend_poor.put(li)
         # 向gitee发送请求获取友链
-        if settings.GITEE_FRIENDS_LINKS['enable']:
+        if self.settings["GITEE_FRIENDS_LINKS"]["enable"]:
             for number in range(1, 100):
                 domain = 'https://gitee.com'
-                dic = settings.GITEE_FRIENDS_LINKS
+                dic = self.settings["GITEE_FRIENDS_LINKS"]
                 url = domain + "/" + dic["owner"] + "/" + dic["repo"] + '/issues?state=' + dic[
                     "state"] + '&page=' + str(number)
                 yield Request(url, callback=self.friend_poor_parse, meta={"gitee": {"domain": domain}})
         # 向github发送请求获取友链
-        if settings.GITHUB_FRIENDS_LINKS['enable']:
+        if self.settings["GITHUB_FRIENDS_LINKS"]["enable"]:
             for number in range(1, 100):
                 domain = 'https://github.com'
-                dic = settings.GITHUB_FRIENDS_LINKS
+                dic = self.settings["GITHUB_FRIENDS_LINKS"]
                 url = domain + "/" + dic["owner"] + "/" + dic["repo"] + "/issues?q=is%3A" + dic[
                     "state"] + '&page=' + str(number)
                 yield Request(url, callback=self.friend_poor_parse, meta={"github": {"domain": domain}})
@@ -93,16 +75,17 @@ class FriendpageLinkSpider(scrapy.Spider):
         friendpage_link, friendpage_theme = self.init_start_urls()
         self.start_urls.extend(friendpage_link)
         for i, url in enumerate(self.start_urls):
+            logger.info(f"起始url: {url}")
             yield Request(url, callback=self.friend_poor_parse, meta={"theme": friendpage_theme[i]})
 
     def init_start_urls(self):
         friendpage_link = []
         friendpage_theme = []
-        if settings.DEBUG:
-            for link_dic in settings.FRIENDPAGE_LINK:
+        if self.settings["DEBUG"]:
+            for link_dic in self.settings["FRIENDPAGE_LINK"]:
                 friendpage_link.append(link_dic["link"])
                 friendpage_theme.append(link_dic["theme"])
-        for item in settings.LINK:
+        for item in self.settings["LINK"]:
             friendpage_link.append(item["link"])
             friendpage_theme.append(item["theme"])
         return friendpage_link, friendpage_theme
@@ -122,7 +105,7 @@ class FriendpageLinkSpider(scrapy.Spider):
             try:
                 content = ''.join(response.css("code *::text").extract())
                 user_info = []
-                if settings.GITHUB_FRIENDS_LINKS["type"] == "volantis":
+                if self.settings["GITHUB_FRIENDS_LINKS"]["type"] == "volantis":
                     reg_volantis(user_info, content)
                     self.friend_poor.put(user_info)
                 else:
@@ -145,7 +128,7 @@ class FriendpageLinkSpider(scrapy.Spider):
                 content = ''.join(response.css("pre *::text").extract())
                 if content != '':
                     user_info = []
-                    if settings.GITHUB_FRIENDS_LINKS["type"] == "volantis":
+                    if self.settings["GITHUB_FRIENDS_LINKS"]["type"] == "volantis":
                         reg_volantis(user_info, content)
                         self.friend_poor.put(user_info)
                     else:
@@ -172,7 +155,7 @@ class FriendpageLinkSpider(scrapy.Spider):
             friend = self.friend_poor.get()
             # 统一url，结尾加"/"
             friend[1] += "/" if not friend[1].endswith("/") else ""
-            if settings.SETTINGS_FRIENDS_LINKS['enable'] and len(friend) == 4:
+            if self.settings["SETTINGS_FRIENDS_LINKS"]['enable'] and len(friend) == 4:
                 # 针对配置项中开启了自定义suffix的友链url进行处理
                 url = friend[1] + friend[3]
                 yield CRequest(url, self.post_feed_parse, meta={"friend": friend}, errback=self.errback_handler)

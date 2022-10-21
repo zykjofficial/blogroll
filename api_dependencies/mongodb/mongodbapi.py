@@ -2,34 +2,24 @@
 # Author：yyyz
 import os
 import random
-
+from fastapi import Depends
 from urllib import parse
-from hexo_circle_of_friends import settings
-from pymongo import MongoClient
 from hexo_circle_of_friends.utils.process_time import time_compare
-
-
-def db_init():
-    if settings.DEBUG:
-        URI = "mongodb+srv://root:@cluster0.wgfbv.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
-    else:
-        URI = os.environ.get("MONGODB_URI")
-    client = MongoClient(URI)
-    db = client.fcircle
-    posts = db.Post
-    friends = db.Friend
-    return posts, friends
+from api_dependencies.utils.validate_params import start_end_check
+from api_dependencies.mongodb import db_interface, security
+from api_dependencies import format_response, dependencies as dep
+from jose import JWTError
 
 
 def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
-    post_collection, friend_db_collection = db_init()
+    session = db_interface.db_init()
+    post_collection, friend_db_collection = session.Post, session.Friend
     article_num = post_collection.count_documents({})
-    if end == -1:
-        end = min(article_num, 1000)
-    if start < 0 or start >= min(article_num, 1000):
-        return {"message": "start error"}
-    if end <= 0 or end > min(article_num, 1000):
-        return {"message": "end error"}
+    # 检查start、end的合法性
+    start, end, message = start_end_check(start, end, article_num)
+    if message:
+        return {"message": message}
+    # 检查rule的合法性
     if rule != "created" and rule != "updated":
         return {"message": "rule error, please use 'created'/'updated'"}
 
@@ -63,7 +53,8 @@ def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
 
 
 def query_friend():
-    _, friend_db_collection = db_init()
+    session = db_interface.db_init()
+    friend_db_collection = session.Friend
     friends = friend_db_collection.find({}, {"_id": 0, "createdAt": 0, "error": 0})
     friend_list_json = []
     if friends:
@@ -76,7 +67,8 @@ def query_friend():
 
 
 def query_random_friend(num):
-    _, friend_db_collection = db_init()
+    session = db_interface.db_init()
+    friend_db_collection = session.Friend
     friends = list(friend_db_collection.find({}, {"_id": 0, "createdAt": 0, "error": 0}))
     try:
         if num < 1:
@@ -92,7 +84,8 @@ def query_random_friend(num):
 
 
 def query_random_post(num):
-    post_collection, _ = db_init()
+    session = db_interface.db_init()
+    post_collection = session.Post
     posts = list(post_collection.find({}, {'_id': 0, "rule": 0, "createdAt": 0}))
     posts_num = post_collection.count_documents({})
     try:
@@ -109,7 +102,8 @@ def query_random_post(num):
 
 
 def query_post(link, num, rule):
-    post_collection, friend_db_collection = db_init()
+    session = db_interface.db_init()
+    post_collection, friend_db_collection = session.Post, session.Friend
     if link is None:
         friend = query_random_friend(1)
         domain = parse.urlsplit(friend.get("link")).netloc
@@ -140,7 +134,8 @@ def query_post(link, num, rule):
 
 def query_friend_status(days):
     # 初始化数据库连接
-    post_collection, friend_db_collection = db_init()
+    session = db_interface.db_init()
+    post_collection, friend_db_collection = session.Post, session.Friend
     # 查询
     posts = list(post_collection.find({}, {'_id': 0, "rule": 0, "createdAt": 0, "created": 0, "avatar": 0, "link": 0,
                                            "title": 0}))
@@ -171,3 +166,45 @@ def query_friend_status(days):
 
 def query_post_json(jsonlink, list, start, end, rule):
     return {"message": "not found"}
+
+
+async def login_with_token_(token: str = Depends(dep.oauth2_scheme)):
+    # 获取或者创建（首次）secret_key
+    secert_key = await security.get_secret_key()
+    try:
+        payload = dep.decode_access_token(token, secert_key)
+    except JWTError:
+        raise format_response.CredentialsException
+
+    return payload
+
+
+async def login_(password: str):
+    session = db_interface.db_init()
+    auth = session.auth
+    # 查询数量
+    auth_count = auth.count_documents({})
+    # 查询结果
+    auth_res = auth.find_one({})
+    # 获取或者创建（首次）secret_key
+    secret_key = await security.get_secret_key()
+    if auth_count == 0:
+        # turn plain pwd to hashed pwd
+        password_hash = dep.create_password_hash(password)
+        # 未保存pwd，生成对应token并保存
+        data = {"password_hash": password_hash}
+        token = dep.encode_access_token(data, secret_key)
+        auth.insert_one({"password": password_hash})
+    elif auth_count == 1:
+        # 保存了pwd，通过pwd验证
+        if dep.verify_password(password, auth_res["password"]):
+            # 更新token
+            data = {"password_hash": auth_res["password"]}
+            token = dep.encode_access_token(data, secret_key)
+        else:
+            # 401
+            return format_response.CredentialsException
+    else:
+        # 401
+        return format_response.CredentialsException
+    return format_response.standard_response(token=token)

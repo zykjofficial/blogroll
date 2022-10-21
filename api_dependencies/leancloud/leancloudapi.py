@@ -5,20 +5,18 @@ import json
 import random
 import requests
 import leancloud
-from hexo_circle_of_friends import settings
+from leancloud.errors import LeanCloudError
+from fastapi import Depends
 from hexo_circle_of_friends.utils.process_time import time_compare
+from api_dependencies import format_response, dependencies as dep
+from api_dependencies.utils.validate_params import start_end_check
+from api_dependencies.leancloud import security, db_interface
+from jose import JWTError
 
 
-def db_init():
-    if settings.DEBUG:
-        leancloud.init(settings.LC_APPID, settings.LC_APPKEY)
-    else:
-        leancloud.init(os.environ["APPID"], os.environ["APPKEY"])
-
-
-def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
+def query_all(li, start: int = 0, end: int = -1, rule: str = "updated"):
     # Verify key
-    db_init()
+    db_interface.db_init()
 
     Friendspoor = leancloud.Object.extend('friend_poor')
     query = Friendspoor.query
@@ -41,6 +39,14 @@ def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
     article_num = len(query_list)
     last_updated_time = max([item.get('createdAt').strftime('%Y-%m-%d %H:%M:%S') for item in query_list])
 
+    # 检查start、end的合法性
+    start, end, message = start_end_check(start, end, article_num)
+    if message:
+        return {"message": message}
+    # 检查rule的合法性
+    if rule != "created" and rule != "updated":
+        return {"message": "rule error, please use 'created'/'updated'"}
+
     data['statistical_data'] = {
         'friends_num': friends_num,
         'active_num': active_num,
@@ -53,7 +59,7 @@ def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
     article_data = []
     for item in query_list:
         itemlist = {}
-        for elem in list:
+        for elem in li:
             if elem == 'created':
                 itemlist[elem] = item.get('created')
             elif elem == 'avatar':
@@ -61,15 +67,6 @@ def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
             else:
                 itemlist[elem] = item.get(elem)
         article_data_init.append(itemlist)
-
-    if end == -1:
-        end = min(article_num, 1000)
-    if start < 0 or start >= min(article_num, 1000):
-        return {"message": "start error"}
-    if end <= 0 or end > min(article_num, 1000):
-        return {"message": "end error"}
-    if rule != "created" and rule != "updated":
-        return {"message": "rule error, please use 'created'/'updated'"}
 
     rules = []
     # list sort 是 稳定 的，这意味着当多个记录具有相同的键值时，将**保留其原始顺序**
@@ -95,7 +92,7 @@ def query_all(list, start: int = 0, end: int = -1, rule: str = "updated"):
 
 def query_friend():
     # Verify key
-    db_init()
+    db_interface.db_init()
 
     Friendlist = leancloud.Object.extend('friend_list')
     query_userinfo = Friendlist.query
@@ -118,7 +115,7 @@ def query_friend():
 
 def query_random_friend(num):
     # Verify key
-    db_init()
+    db_interface.db_init()
 
     Friendlist = leancloud.Object.extend('friend_list')
     query_userinfo = Friendlist.query
@@ -150,7 +147,7 @@ def query_random_friend(num):
 
 def query_random_post(num):
     # Verify key
-    db_init()
+    db_interface.db_init()
 
     # Declare class
     Friendspoor = leancloud.Object.extend('friend_poor')
@@ -190,7 +187,7 @@ def query_random_post(num):
 
 def query_post(link, num, rule):
     # Verify key
-    db_init()
+    db_interface.db_init()
 
     # Declare class
     Friendspoor = leancloud.Object.extend('friend_poor')
@@ -235,7 +232,7 @@ def query_post(link, num, rule):
     if num < 0 or num > min(article_num, 1000):
         num = min(article_num, 1000)
     api_json['statistical_data'] = {
-        "author": author,
+        "name": author,
         "link": link,
         "avatar": avatar,
         "article_num": num
@@ -254,7 +251,7 @@ def query_post(link, num, rule):
 
 def query_friend_status(days):
     # 初始化数据库连接
-    db_init()
+    db_interface.db_init()
     # 查询
     Friendspoor = leancloud.Object.extend('friend_poor')
     query = Friendspoor.query
@@ -294,7 +291,7 @@ def query_friend_status(days):
 
 def query_post_json(jsonlink, list, start, end, rule):
     # Verify key
-    db_init()
+    db_interface.db_init()
     # Declare class
     Friendspoor = leancloud.Object.extend('friend_poor')
     query = Friendspoor.query
@@ -362,3 +359,49 @@ def query_post_json(jsonlink, list, start, end, rule):
     }
     api_json['article_data'] = article_data[start:end]
     return api_json
+
+
+async def login_with_token_(token: str = Depends(dep.oauth2_scheme)):
+    # 获取或者创建（首次）secret_key
+    secert_key = await security.get_secret_key()
+    try:
+        payload = dep.decode_access_token(token, secert_key)
+    except JWTError:
+        raise format_response.CredentialsException
+
+    return payload
+
+
+async def login_(password: str):
+    db_interface.db_init()
+    secret_key = await security.get_secret_key()
+
+    auth = leancloud.Object.extend('auth')
+    auth_db = auth()
+    query = auth.query
+    query.limit(10)
+
+    try:
+        query.select('password')
+        res = query.first()
+        obj_id = res.id
+        # 保存了pwd，通过pwd验证
+        if dep.verify_password(password, res.get("password")):
+            # 更新token
+            data = {"password_hash": res.get("password")}
+            token = dep.encode_access_token(data, secret_key)
+        else:
+            # 401
+            return format_response.CredentialsException
+    except LeanCloudError as e:
+        # 表不存在
+        # turn plain pwd to hashed pwd
+        password_hash = dep.create_password_hash(password)
+        # 未保存pwd，生成对应token并保存
+        data = {"password_hash": password_hash}
+        token = dep.encode_access_token(data, secret_key)
+        auth_db.set("password", password_hash)
+        auth_db.save()
+    except:
+        return format_response.CredentialsException
+    return format_response.standard_response(token=token)
